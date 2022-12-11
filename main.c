@@ -17,7 +17,7 @@ void shine(void) {
 	GPIO_WriteReverse(GPIOD, GPIO_PIN_4);
 }
 
-static uint16_t parameter = 1;
+static uint16_t parameter = 2;
 void main(void){
 CLK_HSIPrescalerConfig(CLK_PRESCALER_HSIDIV1); // taktovat MCU na 16MHz
 
