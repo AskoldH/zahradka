@@ -1,143 +1,149 @@
 #include "swi2c.h"
 
-// read num bytes to array data from slave with desired I2C slv_addres, from desired pointer (address)
-// Generates I2C sequence SLA+W + 1Byte (Address) + RST + SLA+R + num*Byte (data)
-// returns 0xaa if bus is busy too long (function cant start I2C transfer)
-// returns 0xff if bus error (blocked bus)
-// returns 0x01 if slave not present (NACK)
-// returns 0x00 if success
-// slave address in 8bit representation (left aligned 7bit value)
-uint8_t swi2c_read_buf(uint8_t slv_addr, uint8_t address, uint8_t* data, uint16_t num){
-uint8_t i=0,bit;	
-uint8_t ack;
-uint8_t mask;
-
-// --- Generate START ---
-if(swi2c_START()){return 0xaa;} 
-
-// --- SLA+W ---
-mask=0b1<<7;
-while(mask){
-if(swi2c_writebit(slv_addr & mask)){return 0xff;}
-mask = mask >>1;
-}
-ack=swi2c_readbit();
-if(ack){
-	if(swi2c_STOP()){return 0xff;}
-	return ack;
-	}
-
-// --- Data address (pointer in slave) ---
-mask=0b1<<7;
-while(mask){
-if(swi2c_writebit(address & mask)){return 0xff;}
-mask = mask >>1;
-}
-ack=swi2c_readbit();
-if(ack){
-	if(swi2c_STOP()){return 0xff;}
-	return ack;
-	}
+uint8_t sht30_set_data(uint8_t slvaddr){
+	uint8_t i;	
+	uint8_t ack;
+	uint8_t mask;
+	uint8_t command_msb = 0x2C;
+	uint8_t command_lsb = 0x06;
 	
-// --- Generate RESTART ---
-if(swi2c_RESTART()){return 0xff;} 
-
-// --- SLA+R ---
-mask=0b1<<7;
-while(mask){
-if(swi2c_writebit((slv_addr | 0b1) & mask)){return 0xff;}
-mask = mask >>1;
-}
-ack=swi2c_readbit();
-if(ack){
-	if(swi2c_STOP()){return 0xff;}
-	return ack;
-	}
-
-
-// --- Data ---
-for(i=0;i<num;i++){
+	slvaddr = slvaddr<<1;
+	// --- Generate START ---
+	if(swi2c_START()){return 0xaa;}
 	mask=0b1<<7;
 	while(mask){
-	bit = swi2c_readbit();
-	if(bit==0){data[i] &=~mask;}
-	else if(bit==1){data[i] |=mask;}
-	else{swi2c_STOP();return 0xff;}
-	mask = mask >>1;
-	}
-	if((i+1)==num){
-		if(swi2c_writebit(1)){return 0xff;} // NACK
-	}else{
-		if(swi2c_writebit(0)){return 0xff;} // ACK
+		if(swi2c_writebit(slvaddr & mask)){return 0xff;}
+		mask = mask >>1;
 	}
 	
-}
-// --- STOP ---
-if(swi2c_STOP()){return 0xff;}
-return 0;
-}
-
-
-// send num bytes from array data to slave with desired I2C slv_addres, to desired pointer (address)
-// Generates I2C sequence SLA+W + 1Byte (Address) + num*Byte (data)
-// returns 0xaa if bus is busy too long (function cant start I2C transfer)
-// returns 0xff if bus error (blocked bus)
-// returns 0x01 if slave not present (NACK)
-// returns 0x00 if success
-// slave address in 8bit representation (left aligned 7bit value)
-uint8_t swi2c_write_buf(uint8_t slv_addr, uint8_t address, uint8_t* data, uint16_t num){
-uint8_t i;	
-uint8_t ack;
-uint8_t mask;
-
-// --- Generate START ---
-if(swi2c_START()){return 0xaa;} 
-
-// --- SLA+W ---
-mask=0b1<<7;
-while(mask){
-if(swi2c_writebit(slv_addr & mask)){return 0xff;}
-mask = mask >>1;
-}
-ack=swi2c_readbit();
-if(ack){
-	if(swi2c_STOP()){return 0xff;}
-	return ack;
+	ack=swi2c_readbit();
+	if(ack){
+		if(swi2c_STOP()){return 0xff;}
+		return ack;
 	}
-
-// --- Data address (pointer in slave) ---
-mask=0b1<<7;
-while(mask){
-if(swi2c_writebit(address & mask)){return 0xff;}
-mask = mask >>1;
-}
-ack=swi2c_readbit();
-if(ack){
-	if(swi2c_STOP()){return 0xff;}
-	return ack;
-	}
-
-// --- Data ---
-for(i=0;i<num;i++){
+	
 	mask=0b1<<7;
 	while(mask){
-	if(swi2c_writebit(data[i] & mask)){return 0xff;}
-	mask = mask >>1;
+		if(swi2c_writebit(command_msb & mask)){return 0xff;}
+		mask = mask >>1;
+	}
+	
+	ack=swi2c_readbit();
+	if(ack){
+		if(swi2c_STOP()){return 0xff;}
+		return ack;
+	}
+	
+	mask=0b1<<7;
+	while(mask){
+		if(swi2c_writebit(command_lsb & mask)){return 0xff;}
+		mask = mask >>1;
+	}
+	
+	ack=swi2c_readbit();
+	if(ack){
+		if(swi2c_STOP()){return 0xff;}
+		return ack;
+	}
+	
+	// --- STOP ---
+	if(swi2c_STOP()){return 0xff;}
+	return 0;
+}
+
+uint8_t sht30_get_data(uint8_t slvaddr, uint8_t* sht30data){
+	uint8_t i=0, bit;	
+	uint8_t ack;
+	uint8_t mask;
+	sht30_set_data(slvaddr);
+	
+	_delay_us(1000);
+	
+	slvaddr = (slvaddr<<1)+1;
+	// --- Generate START ---
+	if(swi2c_START()){return 0xaa;} 	
+	
+	
+	mask=0b1<<7;
+	while(mask){
+		if(swi2c_writebit(slvaddr & mask)){return 0xff;}
+		mask = mask >>1;
 	}
 	ack=swi2c_readbit();
 	if(ack){
 		if(swi2c_STOP()){return 0xff;}
 		return ack;
+	}
+	
+	for(i=0;i<5;i++){
+		if(i < 2){
+			mask=0b1<<7;
+				while(mask){
+					bit = swi2c_readbit();
+						if(bit==0){
+							sht30data[i] &=~mask;
+						}
+						else if(bit==1){
+							sht30data[i] |=mask;
+							}
+						else{
+							swi2c_STOP();return 0xff;
+						}
+						mask = mask >>1;
+				}
+			swi2c_writebit(0);
+		}
+		else if(i==2){
+			mask=0b1<<7;
+			while(mask){
+				bit = swi2c_readbit();
+					if(bit==0){
+						//humidity[i] &=~mask;
+					}
+					else if(bit==1){
+						//humidity[i] |=mask;
+						}
+					else{
+						swi2c_STOP();return 0xff;
+					}
+					mask = mask >>1;
+			}
+			swi2c_writebit(0);
+		}
+		else{
+			mask=0b1<<7;
+			while(mask){
+				bit = swi2c_readbit();
+					if(bit==0){
+						sht30data[i-1] &=~mask;
+					}
+					else if(bit==1){
+						sht30data[i-1] |=mask;
+						}
+					else{
+						swi2c_STOP();return 0xff;
+					}
+					mask = mask >>1;
+			}
+			if(i==4){swi2c_writebit(1);}
+			else{swi2c_writebit(0);}
 		}
 	}
-
-// --- STOP ---
-if(swi2c_STOP()){return 0xff;}
-return 0;
+	
+	// --- STOP ---
+	if(swi2c_STOP()){return 0xff;}
+	return 0;
 }
 
-
-
+uint8_t sht30_get_temp_and_hmd(uint8_t slvaddr, int16_t* sht30_temp_and_hmd){
+	uint8_t sht30data[3];
+	
+	sht30_get_data(slvaddr, sht30data);
+	sht30_temp_and_hmd[0] = (((((sht30data[0]<<8 | sht30data[1])/65535.0)*175))*1000)/1;
+	sht30_temp_and_hmd[0] = sht30_temp_and_hmd[0]-45000;
+	sht30_temp_and_hmd[1] = (((sht30data[2] << 8 | sht30data[3])/65535.0)*100)/1;
+	return 0;
+}
 // test (ACK/NACK) of selected I2C slave address (like a ping - testing slave present on bus)
 // slave address in 8bit representation (left aligned 7bit value)
 // returns 0 if is slave present on bus
@@ -203,7 +209,7 @@ return 0;
 // generate RESTART bit
 // returns 1 if bus is busy (SDA or SCL is Low)
 // return 0 if success
-uint8_t swi2c_RESTART(void){
+/*uint8_t swi2c_RESTART(void){
 uint16_t timeout=SWI2C_TIMEOUT;
 SCL_LOW;
 SDA_HIGH;
@@ -219,7 +225,7 @@ SWI2C_SS_TIME;
 SCL_LOW;
 SWI2C_SS_TIME;
 return 0;
-}
+}*/
 
 // generate START bit
 // returns 0xff if bus is busy (SDA or SCL is Low)
@@ -256,7 +262,7 @@ return retval;
 // returns 0 if bus is free (success)
 // returns 0xff if SCL is hold low too long
 // returns 0xee if SDA is still held low 
-uint8_t swi2c_recover(void){
+/*uint8_t swi2c_recover(void){
 uint16_t timeout=SWI2C_TIMEOUT;
 uint8_t i;
 SCL_HIGH; // release both lines
@@ -279,4 +285,6 @@ if(SDA_stat() == RESET){
 		}
 		return 0xee;
 	}
-}
+}*/
+
+

@@ -7,9 +7,9 @@
 
 // ---- USER EDIT SECTION ----
 // select GPIOs
-#define SCL_GPIO GPIOC
+#define SCL_GPIO GPIOB
 #define SCL_PIN GPIO_PIN_4
-#define SDA_GPIO GPIOC
+#define SDA_GPIO GPIOB
 #define SDA_PIN GPIO_PIN_5
 
 // coarse timing parameters (~us) 
@@ -38,10 +38,12 @@
 // user functions
 void swi2c_init(void); // init GPIOs as Open Drain outputs
 uint8_t swi2c_test_slave(uint8_t slvaddr); // check if slave with selected adres is present on bus
-uint8_t swi2c_write_buf(uint8_t slv_addr, uint8_t address, uint8_t* data, uint16_t num); // SLA+W - 1B(Address) - num*1B(data)
-uint8_t swi2c_read_buf(uint8_t slv_addr, uint8_t address, uint8_t* data, uint16_t num); // SLA+W - 1B(Address) - RST - SLA+R + num*1B(data)
 uint8_t swi2c_recover(void);
 
+uint8_t sht30_get_temp_and_hmd(uint8_t slvaddr, int16_t* sht30_temp_and_hmd);
+uint8_t sht30_set_data(uint8_t slvaddr);
+uint8_t sht30_get_data(uint8_t slvaddr, uint8_t* sht30data);
+	
 // private functions
 uint8_t swi2c_writebit(uint8_t bit);
 uint8_t swi2c_readbit(void);
