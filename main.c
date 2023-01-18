@@ -7,6 +7,11 @@
 #include "uart.h"
 #include "swi2c.h"
 
+// senzor vlhkosti pudy
+uint16_t lk;
+void ADC_init(void);
+
+
 // time values for milis
 static uint16_t read_temp_period=2000;
 static uint16_t last_time_temp=0;
@@ -43,16 +48,32 @@ void send_temp_and_hmd_sht30(void){
 	send_str(" %\n\r");
 }			
 
+INTERRUPT_HANDLER(EXTI_PORTD_IRQHandler, 6)
+{
+	reverse_led();
+	send_char('a');
+}
+
 void main(void){
 CLK_HSIPrescalerConfig(CLK_PRESCALER_HSIDIV1); // taktovat MCU na 16MHz
 
 // init section
 GPIO_Init(GPIOD, GPIO_PIN_4, GPIO_MODE_OUT_PP_LOW_SLOW); // on-board led
 GPIO_Init(GPIOD, GPIO_PIN_3, GPIO_MODE_OUT_PP_LOW_SLOW); // ventil GPIO
+
+// interrupt init
+GPIO_Init(GPIOD, GPIO_PIN_2, GPIO_MODE_IN_FL_IT);
+EXTI_SetExtIntSensitivity(EXTI_PORT_GPIOD,EXTI_SENSITIVITY_FALL_ONLY);
+ITC_SetSoftwarePriority(ITC_IRQ_PORTD,ITC_PRIORITYLEVEL_1);
+
 init_milis();
 uart1_init();
 swi2c_init();
 _delay_us(100);
+
+enableInterrupts();
+
+ADC_init();
 
   while (1)
 	{
@@ -61,16 +82,22 @@ _delay_us(100);
 		{
 			last_time_temp = milis();
 			
+			// vlhkost pudy poslani uart
+			//lk = ADC_get(ADC1_CHANNEL_2);
+			//send_str(int_to_str(lk)); 
+			//send_str("\n\r");
+	
 			// get tempeture and humidity values into sht30_temp_and_hmd 
 			// variable, [0]-> tempeture, [1]-> humidity
-			sht30_get_temp_and_hmd(SH30_SLVADR, sht30_temp_and_hmd);
+			//sht30_get_temp_and_hmd(SH30_SLVADR, sht30_temp_and_hmd);
 			
 			// sends temperature and humidity via uart
-			send_temp_and_hmd_sht30();
+			//send_temp_and_hmd_sht30();
 			
 			// led on -> ventil open
-			reverse_ventil();
-			reverse_led();
+			//reverse_ventil();
+			send_str("b");
+			// reverse_led();
 		}
 		
 		// toggle ventil on/off
@@ -91,7 +118,23 @@ _delay_us(100);
 	}
 }
 
+// inicializace ADC 
+void ADC_init(void){
+// na pinech/vstupech ADC_IN2 (PB2) a ADC_IN3 (PB3) vypneme vstupní buffer
 
+// channel 1 = GPIOB, GPIO_PIN_0
+ADC1_SchmittTriggerConfig(ADC1_SCHMITTTRIG_CHANNEL1,DISABLE);
+// channel 2 = GPIOB, GPIO_PIN_1
+ADC1_SchmittTriggerConfig(ADC1_SCHMITTTRIG_CHANNEL2,DISABLE);
+// nastavíme clock pro ADC (16MHz / 4 = 4MHz)
+ADC1_PrescalerConfig(ADC1_PRESSEL_FCPU_D4);
+// volíme zarovnání výsledku (typicky vpravo, jen vyjmecne je výhodné vlevo)
+ADC1_AlignConfig(ADC1_ALIGN_RIGHT);
+// nasatvíme multiplexer na nekterý ze vstupních kanálu
+ADC1_Select_Channel(ADC1_CHANNEL_2);
+// rozbehneme AD prevodník
+ADC1_Cmd(ENABLE);
+}
 
 #ifdef USE_FULL_ASSERT
 void assert_failed(u8* file, u32 line)
