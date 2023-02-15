@@ -59,6 +59,7 @@ CLK_HSIPrescalerConfig(CLK_PRESCALER_HSIDIV1); // taktovat MCU na 16MHz
 
 // init section
 GPIO_Init(GPIOD, GPIO_PIN_4, GPIO_MODE_OUT_PP_LOW_SLOW); // on-board led
+// TODO zmenit ventil GPIO -> tohle je pro AIN4
 GPIO_Init(GPIOD, GPIO_PIN_3, GPIO_MODE_OUT_PP_LOW_SLOW); // ventil GPIO
 
 // interrupt init
@@ -71,9 +72,12 @@ uart1_init();
 swi2c_init();
 _delay_us(100);
 
-enableInterrupts();
+//enableInterrupts();
 
-ADC_init();
+//ADC_init();
+send_str("\r\n\r\n");
+send_str("Started...");
+send_str("\r\n");
 
   while (1)
 	{
@@ -82,22 +86,22 @@ ADC_init();
 		{
 			last_time_temp = milis();
 			
-			// vlhkost pudy poslani uart
-			//lk = ADC_get(ADC1_CHANNEL_2);
-			//send_str(int_to_str(lk)); 
-			//send_str("\n\r");
+			//vlhkost pudy poslani uart
+			/*lk = ADC_get(ADC1_CHANNEL_4);
+			send_str("Hodnota vlhkosti: ");
+			send_str(int_to_str(lk));
+			send_str("\r\n");*/
 	
 			// get tempeture and humidity values into sht30_temp_and_hmd 
 			// variable, [0]-> tempeture, [1]-> humidity
-			//sht30_get_temp_and_hmd(SH30_SLVADR, sht30_temp_and_hmd);
+			sht30_get_temp_and_hmd(SH30_SLVADR, sht30_temp_and_hmd);
 			
 			// sends temperature and humidity via uart
-			//send_temp_and_hmd_sht30();
+			send_temp_and_hmd_sht30();
 			
 			// led on -> ventil open
 			//reverse_ventil();
-			send_str("b");
-			// reverse_led();
+			reverse_led();
 		}
 		
 		// toggle ventil on/off
@@ -122,16 +126,16 @@ ADC_init();
 void ADC_init(void){
 // na pinech/vstupech ADC_IN2 (PB2) a ADC_IN3 (PB3) vypneme vstupní buffer
 
-// channel 1 = GPIOB, GPIO_PIN_0
-ADC1_SchmittTriggerConfig(ADC1_SCHMITTTRIG_CHANNEL1,DISABLE);
-// channel 2 = GPIOB, GPIO_PIN_1
-ADC1_SchmittTriggerConfig(ADC1_SCHMITTTRIG_CHANNEL2,DISABLE);
+// channel 1 = GPIOB, GPIO_PIN_0 -> tohle je blbost
+//ADC1_SchmittTriggerConfig(ADC1_SCHMITTTRIG_CHANNEL1,DISABLE);
+// channel 2 = GPIOC, GPIO_PIN_4
+ADC1_SchmittTriggerConfig(ADC1_SCHMITTTRIG_CHANNEL4,DISABLE);
 // nastavíme clock pro ADC (16MHz / 4 = 4MHz)
 ADC1_PrescalerConfig(ADC1_PRESSEL_FCPU_D4);
 // volíme zarovnání výsledku (typicky vpravo, jen vyjmecne je výhodné vlevo)
 ADC1_AlignConfig(ADC1_ALIGN_RIGHT);
 // nasatvíme multiplexer na nekterý ze vstupních kanálu
-ADC1_Select_Channel(ADC1_CHANNEL_2);
+ADC1_Select_Channel(ADC1_CHANNEL_4);
 // rozbehneme AD prevodník
 ADC1_Cmd(ENABLE);
 }

@@ -54,11 +54,11 @@ const char* int_to_str(uint16_t integer)
         {	
             str_inverted[pocet_cifer] = '0';
         }
-        /*else
+        else
         {
             str_inverted[pocet_cifer] = (integer % 10) 
 						+ '0';
-        }*/
+        }
         integer /= 10;
         ++pocet_cifer;
     }
