@@ -48,6 +48,11 @@ const char* int_to_str(uint16_t integer)
 		natusim proc si nemuzu normlene tu promenou initnout v
 		tom loopu*/
 		
+		if (integer==0){
+			str_inverted[pocet_cifer] = '0';
+			pocet_cifer++;
+		}
+		
     while (integer > 0)
     {
         if (!(integer % 10))
@@ -60,7 +65,7 @@ const char* int_to_str(uint16_t integer)
 						+ '0';
         }
         integer /= 10;
-        ++pocet_cifer;
+        pocet_cifer++;
     }
 			
     str_inverted[pocet_cifer] = '/0' ;
@@ -72,6 +77,6 @@ const char* int_to_str(uint16_t integer)
     }
 		
     str_final[pocet_cifer] = '\0';
-
+		
     return (str_final);
 }

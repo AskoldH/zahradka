@@ -1,5 +1,175 @@
 #include "swi2c.h"
 
+// writes 4 bytes from data_to_write list to EEPROM memory
+// position starts of data starts with memory_block_addr
+uint8_t write_to_EEPROM(uint8_t* data_to_write, uint16_t memory_block_addr, uint8_t slv_addr){
+	uint8_t i, ack, mask;
+	uint8_t memory_addr_MSB = memory_block_addr>>8;
+	uint8_t memory_addr_LSB = memory_block_addr;
+	
+	// stupid delay function to secure normal function
+	uint16_t j;
+	for(j=0; j < 30000; j++){}
+	
+	// start
+	if(swi2c_START()){return 0xaa;}
+	
+	// send address
+	mask=0b1<<7;
+	while(mask){
+		if(swi2c_writebit(slv_addr<<1 & mask)){return 0xff;}
+		mask = mask >>1;
+	}
+	// ack
+	ack=swi2c_readbit();
+	if(ack){
+		if(swi2c_STOP()){return 0xff;}
+		return ack;
+	}
+	
+	// send memory address MSB byte
+	mask=0b1<<7;
+	while(mask){
+		if(swi2c_writebit(memory_addr_MSB & mask)){return 0xff;}
+		mask = mask >>1;
+	}
+	
+	// ack
+	ack=swi2c_readbit();
+	if(ack){
+		if(swi2c_STOP()){return 0xff;}
+		return ack;
+	}
+	
+	// send memory address LSB byte
+	mask=0b1<<7;
+	while(mask){
+		if(swi2c_writebit(memory_addr_LSB & mask)){return 0xff;}
+		mask = mask >>1;
+	}
+	
+	// ack
+	ack=swi2c_readbit();
+	if(ack){
+		if(swi2c_STOP()){return 0xff;}
+		return ack;
+	}
+	
+	for(i=0; i < 4; i++){
+		// send data_to_write
+		mask=0b1<<7;
+		while(mask){
+			if(swi2c_writebit(data_to_write[i] & mask)){return 0xff;}
+			mask = mask >>1;
+		}
+		// ack
+		ack=swi2c_readbit();
+		if(ack){
+			if(swi2c_STOP()){return 0xff;}
+			return ack;
+			}
+	}
+	
+	// stop
+	if(swi2c_STOP()){return 0xff;}
+	return 0;
+}
+
+// reads 4 bytes from EEPROM and saves it into read_data
+// starts reading from position memory_block_addr
+uint8_t read_from_EEPROM(uint8_t* read_data,  uint16_t memory_block_addr, uint8_t slv_addr){
+	uint8_t i, mask, ack, bit; 
+	uint8_t memory_addr_LSB = memory_block_addr;
+	uint8_t memory_addr_MSB = memory_block_addr>>8;
+	
+	// stupid delay function to secure normal function
+	uint16_t j;
+	for(j=0; j < 30000; j++){}
+	
+	// start
+	if(swi2c_START()){return 0xaa;}
+	
+	// send address
+	mask=0b1<<7;
+	while(mask){
+		if(swi2c_writebit(slv_addr<<1 & mask)){return 0xff;}
+		mask = mask >>1;
+	}
+	
+	// ack
+	ack=swi2c_readbit();
+	if(ack){
+		if(swi2c_STOP()){return 0xff;}
+		return ack;
+	}
+	
+	// send memory address MSB byte
+	mask=0b1<<7;
+	while(mask){
+		if(swi2c_writebit(memory_addr_MSB & mask)){return 0xff;}
+		mask = mask >>1;
+	}
+	
+	// ack
+	ack=swi2c_readbit();
+	if(ack){
+		if(swi2c_STOP()){return 0xff;}
+		return ack;
+	}
+	
+	// send memory address LSB byte
+	mask=0b1<<7;
+	while(mask){
+		if(swi2c_writebit(memory_addr_LSB & mask)){return 0xff;}
+		mask = mask >>1;
+	}
+	
+	// ack
+	ack=swi2c_readbit();
+	if(ack){
+		if(swi2c_STOP()){return 0xff;}
+		return ack;
+	}
+	
+	// stop
+	if(swi2c_STOP()){return 0xff;}
+	
+	// start
+	if(swi2c_START()){return 0xaa;}
+	
+	// send address
+	mask=0b1<<7;
+	while(mask){
+		if(swi2c_writebit(((slv_addr<<1)|1) & mask)){return 0xff;}
+		mask = mask >>1;
+	}
+	
+	// ack
+	ack=swi2c_readbit();
+	if(ack){
+		if(swi2c_STOP()){return 0xff;}
+		return ack;
+	}
+	
+	// read data 
+	for(i=0; i<4; i++){
+		mask=0b1<<7;
+		while(mask){
+			bit = swi2c_readbit();
+			if(bit==0){read_data[i] &=~mask;}
+			else if(bit==1){read_data[i] |=mask;}
+			else{swi2c_STOP();return 0xff;}
+			mask = mask >>1;
+			}
+		if(i==3){swi2c_writebit(1);}
+		else{swi2c_writebit(0);}
+	}
+	
+	// stop
+	if(swi2c_STOP()){return 0xff;}
+	return 0;
+}
+
 uint8_t sht30_set_data(uint8_t slvaddr){
 	uint8_t i;	
 	uint8_t ack;

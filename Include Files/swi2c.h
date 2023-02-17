@@ -43,6 +43,8 @@ uint8_t swi2c_recover(void);
 uint8_t sht30_get_temp_and_hmd(uint8_t slvaddr, int16_t* sht30_temp_and_hmd);
 uint8_t sht30_set_data(uint8_t slvaddr);
 uint8_t sht30_get_data(uint8_t slvaddr, uint8_t* sht30data);
+uint8_t write_to_EEPROM(uint8_t* data_to_write, uint16_t memory_block_addr, uint8_t slv_addr);
+uint8_t read_from_EEPROM(uint8_t* read_data,  uint16_t memory_block_addr, uint8_t slv_addr);
 	
 // private functions
 uint8_t swi2c_writebit(uint8_t bit);
